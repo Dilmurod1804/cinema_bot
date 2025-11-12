@@ -1,0 +1,8 @@
+# config.py
+TOKEN = "8419203258:AAGPb9s59PwZaSNPoupr8eerQ65k36BSfZM" 
+ADMINS = [7428146127] 
+DB_NAME = "cinema.db" 
+
+# Qo'shimcha sozlamalar
+ADMIN_PHONE = "+998950897901"
+DEFAULT_PARSE_MODE = "HTML"
