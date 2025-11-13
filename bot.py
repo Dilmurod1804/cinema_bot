@@ -14,17 +14,21 @@ from database import create_tables
 from config import TOKEN, DEFAULT_PARSE_MODE
 
 # --- RENDER.COM UCHUN WEBHOOK SOZLAMALARI ---
-# Render portini avtomatik olish
+# Render portini avtomatik olish. Faqat ENV'dagi PORT ishlatiladi.
 WEB_SERVER_HOST = "0.0.0.0"
-WEB_SERVER_PORT = int(os.environ.get("PORT", 8000))
 
-# Render.com avtomatik beradigan tashqi URLni olish.
-# Eslatma: BOT_TOKEN Render ENV'da o'rnatilgan bo'lishi shart!
+# O'zgarish 1: Defolt qiymat (8000) o'rniga faqat Render bergan PORTni ishlatish.
+# Bu barqarorlikni oshiradi.
+# Agar PORT o'rnatilmagan bo'lsa, xato beradi (Lekin Render doimiy beradi).
+WEB_SERVER_PORT = int(os.environ.get("PORT")) 
+
+# BOT_TOKEN ni env-variable dan olishni birinchi o'ringa qo'yamiz
 BOT_TOKEN = os.environ.get("BOT_TOKEN", TOKEN) # Agar ENV bo'lmasa, config'dan oladi
 BASE_WEBHOOK_URL = os.environ.get("RENDER_EXTERNAL_URL") 
 
-# Webhook manzili (xavfsizlik uchun Token ishlatiladi)
-WEBHOOK_PATH = f"/webhook/{BOT_TOKEN}" 
+# O'zgarish 2: WEBHOOK_PATH ni soddalashtirish.
+# /webhook/[TOKEN] o'rniga faqat /TOKEN ni ishlatamiz, bu 404 xatosini kamaytiradi.
+WEBHOOK_PATH = f"/{BOT_TOKEN}" 
 WEBHOOK_URL = f"{BASE_WEBHOOK_URL}{WEBHOOK_PATH}" 
 # --------------------------------------------
 
@@ -64,6 +68,7 @@ async def main() -> None:
             bot=bot,
         )
         # Telegramdan keladigan POST so'rovlarini ushlab oluvchi yo'lni o'rnatish
+        # WEBHOOK_PATH ni to'g'ri registratsiya qilish
         webhook_requests_handler.register(app, path=WEBHOOK_PATH)
         
         # Veb-serverni ishga tushirish (Render.com talab qilganidek Portni tinglash!)
