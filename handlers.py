@@ -45,6 +45,16 @@ class SearchMovie(StatesGroup):
 class SearchByName(StatesGroup):
     query = State()
 
+
+from aiogram import F # F filtrini import qiling
+
+# ... boshqa kodlar ...
+
+@router.message(F.chat.type.in_(['private'])) # F.chat.type.in_(['private']) filtrini qo'shing
+async def all_messages_handler(message: Message):
+    # Faylning 393-qatori shu yerda
+    await message.answer("❓ Tushunarsiz buyruq. Kino izlash uchun klaviaturadagi tugmalarni ishlating.")
+
 # -------------------- Utility Functions --------------------
 
 async def check_user_subscription(bot, user_id, channels):
