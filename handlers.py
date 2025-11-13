@@ -1,11 +1,11 @@
-# handlers.py (Yangi va yakuniy versiya)
+# handlers.py (Tuzatilgan versiya)
 from aiogram import Router, F
-from aiogram.filters import CommandStart
+from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError 
-import re # Qo'shimcha import
+import re 
 
 from config import ADMINS
 from database import (
@@ -45,15 +45,6 @@ class SearchMovie(StatesGroup):
 class SearchByName(StatesGroup):
     query = State()
 
-
-from aiogram import F # F filtrini import qiling
-
-# ... boshqa kodlar ...
-
-@router.message(F.chat.type.in_(['private'])) # F.chat.type.in_(['private']) filtrini qo'shing
-async def all_messages_handler(message: Message):
-    # Faylning 393-qatori shu yerda
-    await message.answer("❓ Tushunarsiz buyruq. Kino izlash uchun klaviaturadagi tugmalarni ishlating.")
 
 # -------------------- Utility Functions --------------------
 
@@ -103,7 +94,6 @@ async def handle_movie_code_search(message: Message, code: str):
     try:
         caption_text = f"🎬 {title} | Kod: <b>{code}</b>"
         
-        # ✅ MUAMMO TUZATILDI: message.answer_video o'rniga message.bot.send_video ishlatildi
         await message.bot.send_video(
             chat_id=message.from_user.id,
             video=file_id,
@@ -153,9 +143,9 @@ async def check_subscriptions(callback: CallbackQuery):
         await callback.answer("Hali barcha kanallarga obuna emassiz!", show_alert=True)
         text = "❗️ Quyidagi kanallarga obuna bo‘ling:\n" + "\n".join(not_subscribed)
         try:
-             await callback.message.edit_text(text, reply_markup=make_subscription_markup(channels))
+            await callback.message.edit_text(text, reply_markup=make_subscription_markup(channels))
         except TelegramBadRequest:
-             pass 
+            pass 
     else:
         await callback.answer("✅ Barchaga obuna bo‘lgansiz!", show_alert=True)
         await callback.message.answer("🎬 Endi kinolarni qidirishingiz mumkin:", reply_markup=user_keyboard())
@@ -253,7 +243,9 @@ async def admin_exit(message: Message, state: FSMContext):
     await state.clear()
     await message.answer("👋 Admin panelidan chiqildi. Endi siz foydalanuvchi klaviaturasini ko'rasiz.", reply_markup=user_keyboard())
 
-# ... (Qolgan admin funksiyalari o'zgarishsiz qoldirildi, ular barqaror) ...
+# --- delete, edit, channels, ads handlers (oldin kiritilgan) o'zgarishsiz qoldi ---
+
+# ... delete movie, edit movie, channel, ads handlers... 
 
 # ---------------- Channels ----------------
 @router.message(F.text == "➕ Kanal qo'shish")
@@ -268,7 +260,7 @@ async def admin_add_channel_save(message: Message, state: FSMContext):
     raw = message.text.strip()
     username = re.sub(r'https?://t\.me/', '@', raw, flags=re.IGNORECASE).strip()
     if not username.startswith('@'):
-         username = "@" + username
+        username = "@" + username
 
     if add_channel(username):
         await message.answer(f"✅ Kanal <b>{username}</b> qo'shildi. Endi botni bu kanalga admin qilib qo'ying.")
@@ -282,9 +274,9 @@ async def admin_remove_channel_start(message: Message):
         return
     channels = list_channels()
     if not channels:
-         await message.answer("🗑 Hozirda hech qanday kanal qo'shilmagan.")
-         return
-         
+        await message.answer("🗑 Hozirda hech qanday kanal qo'shilmagan.")
+        return
+        
     text = "🗑 O'chiriladigan kanal(lar) username yoki linkini kiriting:\n"
     text += "\n".join(channels)
     await message.answer(text)
@@ -292,12 +284,12 @@ async def admin_remove_channel_start(message: Message):
 @router.message(F.text.startswith(("@", "https://t.me/", "t.me/")))
 async def admin_remove_channel_confirm(message: Message):
     if message.from_user.id not in ADMINS:
-         return
-         
+        return
+        
     raw = message.text.strip()
     username = re.sub(r'https?://t\.me/', '@', raw, flags=re.IGNORECASE).strip()
     if not username.startswith('@'):
-         username = "@" + username
+        username = "@" + username
 
     if remove_channel(username):
         await message.answer(f"✅ Kanal <b>{username}</b> o'chirildi.")
@@ -344,9 +336,9 @@ async def user_search_by_code_fsm(message: Message, state: FSMContext):
     await state.clear() 
     
     if not code.isdigit() or len(code) != 4:
-         await message.answer("❌ Kino kodi 4 xonali raqam bo'lishi kerak.")
-         return
-         
+        await message.answer("❌ Kino kodi 4 xonali raqam bo'lishi kerak.")
+        return
+        
     await handle_movie_code_search(message, code)
 
 
@@ -388,16 +380,20 @@ async def user_search_name_result(message: Message, state: FSMContext):
     text += "\nKinoni ko‘rish uchun yuqoridagi <b>kodni</b> yuboring yoki 🎬 Kino izlash orqali kod bilan qidiring."
     await message.answer(text)
 
-# -------------------- General Catch-all Handler (Oxirgi) --------------------
-
+# -------------------- General Catch-all Handler (Oxirgi va yagona) --------------------
+# Bu handler faqat barcha yuqoridagi handlerlar ushlab ololmagan xabarlarni ushlaydi.
 @router.message()
-async def all_messages_handler(message: Message, state: FSMContext):
+async def final_catch_all_handler(message: Message, state: FSMContext):
     current_state = await state.get_state()
     
-    # Faqat adminlar uchun kanal o'chirish logikasi o'tib ketgan bo'lsa
-    if message.from_user.id in ADMINS and not current_state:
-        # Bu yerga faqat admin yuborgan, lekin hech qanday handler ushlamagan xabar keladi.
-        await message.answer("❓ Tushunarsiz buyruq. Admin panelidan foydalanish uchun to'g'ri tugmalarni bosing.")
-    
-    if message.from_user.id not in ADMINS and not current_state:
-        await message.answer("❓ Tushunarsiz buyruq. Kino izlash uchun klaviaturadagi tugmalarni ishlating.")
+    # Agar foydalanuvchi biror state'da bo'lsa, bu yerga tushmasligi kerak.
+    # Agar tushsa ham, odatda bu state'dan chiqish buyrug'i emas.
+
+    if not current_state:
+        # State mavjud emas
+        if message.from_user.id in ADMINS:
+            # Admin hech qanday buyruq/tugmaga mos kelmagan matn yubordi
+            await message.answer("❓ Tushunarsiz buyruq. Admin panelidan foydalanish uchun to'g'ri tugmalarni bosing.")
+        else:
+            # Oddiy foydalanuvchi hech qanday buyruq/tugmaga mos kelmagan matn yubordi
+            await message.answer("❓ Tushunarsiz buyruq. Kino izlash uchun klaviaturadagi tugmalarni ishlating.")
